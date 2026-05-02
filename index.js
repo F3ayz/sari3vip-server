@@ -1,7 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const { exec } = require('child_process');
-const https = require('https');
 const app = express();
 
 app.use(cors());
@@ -11,34 +9,43 @@ app.get('/', (req, res) => {
   res.json({ status: 'سريع VIP Server يعمل! ⚡' });
 });
 
-app.post('/download', (req, res) => {
+app.post('/download', async (req, res) => {
   const { url, quality } = req.body;
   
   if (!url) {
     return res.status(400).json({ error: 'الرابط مطلوب' });
   }
 
-  let format = 'best';
-  if (quality === '1080') format = 'bestvideo[height<=1080]+bestaudio/best';
-  if (quality === '720') format = 'bestvideo[height<=720]+bestaudio/best';
-  if (quality === '480') format = 'bestvideo[height<=480]+bestaudio/best';
-  if (quality === 'mp3') format = 'bestaudio/best';
-
-  const ytdlpPath = process.platform === 'win32' ? './yt-dlp.exe' : 'yt-dlp';
-  const cmd = `${ytdlpPath} -f "${format}" --get-url "${url}"`;
-  
-  exec(cmd, { timeout: 30000 }, (error, stdout, stderr) => {
-    if (error) {
-      console.error('Error:', error.message);
-      return res.status(500).json({ error: 'فشل استخراج الرابط', details: error.message });
-    }
+  try {
+    const apiUrl = `https://api.cobalt.tools/api/json`;
     
-    const downloadUrl = stdout.trim().split('\n')[0];
-    if (!downloadUrl) {
-      return res.status(500).json({ error: 'لم يتم العثور على رابط' });
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        url: url,
+        vQuality: quality === 'mp3' ? '128' : quality || '720',
+        isAudioOnly: quality === 'mp3',
+        filenamePattern: 'basic',
+      }),
+    });
+
+    const data = await response.json();
+    
+    if (data.status === 'stream' || data.status === 'redirect') {
+      res.json({ url: data.url, status: 'success' });
+    } else if (data.status === 'picker') {
+      res.json({ url: data.picker[0].url, status: 'success' });
+    } else {
+      res.status(500).json({ error: 'فشل استخراج الرابط', details: data });
     }
-    res.json({ url: downloadUrl, status: 'success' });
-  });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'خطأ في السيرفر', details: error.message });
+  }
 });
 
 app.get('/health', (req, res) => {
