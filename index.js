@@ -17,33 +17,35 @@ app.post('/download', async (req, res) => {
   }
 
   try {
-    const apiUrl = `https://snapsave.app/action.php`;
-    
-    const formData = new URLSearchParams();
-    formData.append('url', url);
-    formData.append('lang', 'ar');
+    const encodedUrl = encodeURIComponent(url);
+    const apiUrl = `https://co.wuk.sh/api/json`;
     
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0',
-        'Referer': 'https://snapsave.app/',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
-      body: formData.toString(),
+      body: JSON.stringify({
+        url: url,
+        vQuality: '720',
+        filenamePattern: 'basic',
+        isNoTTWatermark: true,
+      }),
     });
 
-    const text = await response.text();
+    const data = await response.json();
+    console.log('Response:', JSON.stringify(data));
     
-    const urlMatch = text.match(/https?:\/\/[^\s"'<>]+\.(mp4|webm|mov)[^\s"'<>]*/i);
-    
-    if (urlMatch) {
-      res.json({ url: urlMatch[0], status: 'success' });
+    if (data.status === 'stream' || data.status === 'redirect' || data.status === 'tunnel') {
+      res.json({ url: data.url, status: 'success' });
+    } else if (data.status === 'picker') {
+      res.json({ url: data.picker[0].url, status: 'success' });
     } else {
-      res.status(500).json({ error: 'لم يتم العثور على رابط' });
+      res.status(500).json({ error: 'فشل', details: data });
     }
   } catch (error) {
-    res.status(500).json({ error: 'خطأ في السيرفر', details: error.message });
+    res.status(500).json({ error: 'خطأ', details: error.message });
   }
 });
 
