@@ -5,42 +5,45 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const RAPIDAPI_KEY = 'c7f193283fmshda5eca4c4821618p12b006jsn62168ee85089';
-
 app.get('/', (req, res) => {
   res.json({ status: 'سريع VIP Server يعمل! ⚡' });
 });
 
 app.post('/download', async (req, res) => {
-  const { url, quality } = req.body;
+  const { url } = req.body;
   
   if (!url) {
     return res.status(400).json({ error: 'الرابط مطلوب' });
   }
 
   try {
-    const encodedUrl = encodeURIComponent(url);
-    const apiUrl = `https://social-media-video-downloader.p.rapidapi.com/smvd/get/all?url=${encodedUrl}`;
+    const apiUrl = `https://snapsave.app/action.php`;
+    
+    const formData = new URLSearchParams();
+    formData.append('url', url);
+    formData.append('lang', 'ar');
     
     const response = await fetch(apiUrl, {
-      method: 'GET',
+      method: 'POST',
       headers: {
-        'x-rapidapi-host': 'social-media-video-downloader.p.rapidapi.com',
-        'x-rapidapi-key': RAPIDAPI_KEY,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0',
+        'Referer': 'https://snapsave.app/',
       },
+      body: formData.toString(),
     });
 
-    const data = await response.json();
-    console.log('Response:', JSON.stringify(data));
+    const text = await response.text();
     
-    if (data.links && data.links.length > 0) {
-      const videoLink = data.links[0];
-      res.json({ url: videoLink.link, status: 'success' });
+    const urlMatch = text.match(/https?:\/\/[^\s"'<>]+\.(mp4|webm|mov)[^\s"'<>]*/i);
+    
+    if (urlMatch) {
+      res.json({ url: urlMatch[0], status: 'success' });
     } else {
-      res.status(500).json({ error: 'فشل', details: data });
+      res.status(500).json({ error: 'لم يتم العثور على رابط' });
     }
   } catch (error) {
-    res.status(500).json({ error: 'خطأ', details: error.message });
+    res.status(500).json({ error: 'خطأ في السيرفر', details: error.message });
   }
 });
 
