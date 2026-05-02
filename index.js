@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { exec } = require('child_process');
+const https = require('https');
 const app = express();
 
 app.use(cors());
@@ -23,14 +24,19 @@ app.post('/download', (req, res) => {
   if (quality === '480') format = 'bestvideo[height<=480]+bestaudio/best';
   if (quality === 'mp3') format = 'bestaudio/best';
 
-  const cmd = `yt-dlp -f "${format}" --get-url "${url}"`;
+  const ytdlpPath = process.platform === 'win32' ? './yt-dlp.exe' : 'yt-dlp';
+  const cmd = `${ytdlpPath} -f "${format}" --get-url "${url}"`;
   
-  exec(cmd, (error, stdout, stderr) => {
+  exec(cmd, { timeout: 30000 }, (error, stdout, stderr) => {
     if (error) {
-      return res.status(500).json({ error: 'فشل استخراج الرابط' });
+      console.error('Error:', error.message);
+      return res.status(500).json({ error: 'فشل استخراج الرابط', details: error.message });
     }
     
     const downloadUrl = stdout.trim().split('\n')[0];
+    if (!downloadUrl) {
+      return res.status(500).json({ error: 'لم يتم العثور على رابط' });
+    }
     res.json({ url: downloadUrl, status: 'success' });
   });
 });
