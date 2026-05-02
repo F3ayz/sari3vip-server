@@ -34,13 +34,13 @@ app.post('/download', async (req, res) => {
     console.log('Response:', JSON.stringify(data));
     
     if (data.links && data.links.length > 0) {
-      const videoLink = data.links.find(l => l.quality === quality) || data.links[0];
+      const videoLink = data.links[0];
       res.json({ url: videoLink.link, status: 'success' });
     } else {
-      res.status(500).json({ error: 'فشل استخراج الرابط', details: data });
+      res.status(500).json({ error: 'فشل', details: data });
     }
   } catch (error) {
-    res.status(500).json({ error: 'خطأ في السيرفر', details: error.message });
+    res.status(500).json({ error: 'خطأ', details: error.message });
   }
 });
 
