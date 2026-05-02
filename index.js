@@ -17,29 +17,26 @@ app.post('/download', async (req, res) => {
   }
 
   try {
-    const encodedUrl = encodeURIComponent(url);
-    const apiUrl = `https://co.wuk.sh/api/json`;
-    
-    const response = await fetch(apiUrl, {
+    const response = await fetch('https://api.cobalt.tools/api/json', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0',
       },
       body: JSON.stringify({
         url: url,
         vQuality: '720',
         filenamePattern: 'basic',
-        isNoTTWatermark: true,
       }),
     });
 
     const data = await response.json();
     console.log('Response:', JSON.stringify(data));
     
-    if (data.status === 'stream' || data.status === 'redirect' || data.status === 'tunnel') {
+    if (data.url) {
       res.json({ url: data.url, status: 'success' });
-    } else if (data.status === 'picker') {
+    } else if (data.picker && data.picker.length > 0) {
       res.json({ url: data.picker[0].url, status: 'success' });
     } else {
       res.status(500).json({ error: 'فشل', details: data });
