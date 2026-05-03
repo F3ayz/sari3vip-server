@@ -9,35 +9,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ─── تثبيت yt-dlp تلقائياً على Railway (Linux) ───────────────────────────────
-function ensureYtDlp() {
+// تحديث yt-dlp كل 24 ساعة تلقائياً
+setInterval(() => {
   try {
-    execSync('yt-dlp --version', { stdio: 'ignore' });
-    console.log('✅ yt-dlp موجود');
-  } catch {
-    console.log('📥 جاري تثبيت yt-dlp...');
-    execSync(
-      'curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && chmod a+rx /usr/local/bin/yt-dlp',
-      { stdio: 'inherit' }
-    );
-    console.log('✅ تم تثبيت yt-dlp');
+    execSync('yt-dlp -U', { stdio: 'inherit' });
+    console.log('✅ تم تحديث yt-dlp');
+  } catch (e) {
+    console.log('⚠️ فشل التحديث:', e.message);
   }
-}
+}, 24 * 60 * 60 * 1000);
 
-// ─── تحديث تلقائي كل 24 ساعة ─────────────────────────────────────────────────
-function startAutoUpdate() {
-  setInterval(async () => {
-    try {
-      console.log('🔄 جاري تحديث yt-dlp...');
-      execSync('yt-dlp -U', { stdio: 'inherit' });
-      console.log('✅ تم تحديث yt-dlp');
-    } catch (e) {
-      console.log('⚠️ فشل التحديث:', e.message);
-    }
-  }, 24 * 60 * 60 * 1000); // كل 24 ساعة
-}
-
-// ─── Routes ──────────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.json({ status: 'سريع VIP Server يعمل! ⚡', engine: 'yt-dlp' });
 });
@@ -53,9 +34,10 @@ app.post('/download', async (req, res) => {
       ? 'bestaudio/best'
       : `bestvideo[height<=${quality}]+bestaudio/best[height<=${quality}]/best`;
 
-    const cmd = `yt-dlp --no-playlist -f "${format}" --get-url "${url}"`;
-
-    const { stdout } = await execAsync(cmd, { timeout: 30000 });
+    const { stdout } = await execAsync(
+      `yt-dlp --no-playlist -f "${format}" --get-url "${url}"`,
+      { timeout: 30000 }
+    );
 
     const links = stdout.trim().split('\n').filter(l => l.startsWith('http'));
 
@@ -63,16 +45,12 @@ app.post('/download', async (req, res) => {
       return res.status(500).json({ error: 'لم يتم العثور على رابط' });
     }
 
-    // رابط الفيديو (أول رابط) ورابط الصوت (ثاني رابط إن وجد)
-    const videoUrl = links[0];
-    const audioUrl = links[1] || null;
-
     console.log('✅ تم استخراج الرابط');
-    res.json({ 
+    res.json({
       success: true,
-      download_url: videoUrl,
-      audio_url: audioUrl,
-      quality: quality
+      download_url: links[0],
+      audio_url: links[1] || null,
+      quality
     });
 
   } catch (e) {
@@ -81,10 +59,5 @@ app.post('/download', async (req, res) => {
   }
 });
 
-// ─── تشغيل السيرفر ────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-
-ensureYtDlp();
-startAutoUpdate();
-
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
