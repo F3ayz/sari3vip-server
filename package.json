@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "build": "pip3 install yt-dlp || pip install yt-dlp"
   },
   "dependencies": {
     "cors": "^2.8.5",
