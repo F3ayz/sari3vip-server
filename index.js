@@ -17,7 +17,7 @@ app.post('/download', async (req, res) => {
   }
 
   try {
-    const response = await fetch('https://api.cobalt.tools/api/json', {
+    const response = await fetch('https://api.cobalt.tools/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -26,28 +26,25 @@ app.post('/download', async (req, res) => {
       },
       body: JSON.stringify({
         url: url,
-        vQuality: '720',
-        filenamePattern: 'basic',
+        videoQuality: '720',
+        filenameStyle: 'basic',
       }),
     });
 
     const data = await response.json();
-    console.log('Response:', JSON.stringify(data));
+    console.log('Cobalt Response:', JSON.stringify(data));
     
     if (data.url) {
-      res.json({ url: data.url, status: 'success' });
+      res.json({ url: data.url });
     } else if (data.picker && data.picker.length > 0) {
-      res.json({ url: data.picker[0].url, status: 'success' });
+      res.json({ url: data.picker[0].url });
     } else {
       res.status(500).json({ error: 'فشل', details: data });
     }
   } catch (error) {
-    res.status(500).json({ error: 'خطأ', details: error.message });
+    console.error('Error:', error.message);
+    res.status(500).json({ error: error.message });
   }
-});
-
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date() });
 });
 
 const PORT = process.env.PORT || 3000;
